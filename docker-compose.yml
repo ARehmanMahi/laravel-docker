@@ -1,0 +1,104 @@
+# MySQL credentials root/p@rooT007
+
+# docker-compose build                                                  // build prerequisites containers
+# docker-compose run --rm _composer create-project laravel/laravel app  // run container, executes and then destroy
+
+# docker-compose up -d nginx                                            // run containers in daemon mode
+# docker-compose down                                                   // stop containers
+
+# docker exec -it php chown -R  www-data storage                        // set laravel permissions
+# docker exec -it php chown -R  www-data bootstrap/cache                // set laravel permissions
+
+# docker-compose run --rm composer install                              // run container, executes and then destroy
+# docker exec -it php sh                                                // ssh into container
+# docker exec -it php kill -USR2 1                                      // reload ini config
+
+version: '3.8'
+
+services:
+  mysql:
+    build:
+      context: .
+      dockerfile: docker-files/mysql.dockerfile
+    restart: unless-stopped
+    container_name: mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: laravel_crud
+      MYSQL_USER: laravel_crud
+      MYSQL_PASSWORD: p@rooT007
+      MYSQL_ROOT_PASSWORD: p@rooT007
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  php:
+    build:
+      context: .
+      dockerfile: docker-files/php.dockerfile
+    restart: unless-stopped
+    container_name: php
+    volumes:
+      - ./app/:/var/www/html/app/
+    working_dir: /var/www/html/app/
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker-files/nginx.dockerfile
+    restart: unless-stopped
+    container_name: nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./app/:/var/www/html/app/
+    working_dir: /var/www/html/app/
+    extra_hosts:
+      - "laravel-docker.test:127.0.0.1"
+    depends_on:
+      - mysql
+      - php
+
+  artisan:
+    build:
+      context: .
+      dockerfile: docker-files/php.dockerfile
+    container_name: artisan
+    entrypoint: [ 'php', 'artisan' ]
+    volumes:
+      - ./app/:/var/www/html/app/
+    working_dir: /var/www/html/app/
+    depends_on:
+      - mysql
+      - php
+
+  composer:
+    build:
+      context: .
+      dockerfile: docker-files/composer.dockerfile
+    container_name: composer
+    volumes:
+      - ./app/:/var/www/html/app/
+    working_dir: /var/www/html/app/
+
+  _composer:
+    build:
+      context: .
+      dockerfile: docker-files/composer.dockerfile
+    container_name: composer
+    volumes:
+      - ./:/var/www/html/
+    working_dir: /var/www/html/
+
+  npm:
+    build:
+      context: .
+      dockerfile: docker-files/node.dockerfile
+    container_name: npm
+    entrypoint: [ 'npm' ]
+    volumes:
+      - ./:/var/www/html/
+    working_dir: /var/www/html/
+
+volumes:
+  mysql-data:
